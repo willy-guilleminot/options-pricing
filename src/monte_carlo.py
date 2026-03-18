@@ -55,8 +55,6 @@ def mc_asian_call(S, K, T, r, sigma, n_simulations=10000, n_steps=252):
 
 def mc_barrier_call(S, K, T, r, sigma, barrier, n_simulations=10000, n_steps=252):
     paths = simulate_paths(S, T, r, sigma, n_simulations, n_steps)
-    payoffs = np.zeros(n_simulations)
-
     barrier_crossed = np.max(paths, axis=1) >= barrier
     final_payoffs = np.maximum(paths[:, -1] - K, 0)
     payoffs = np.where(barrier_crossed, 0, final_payoffs)
