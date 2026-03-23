@@ -110,7 +110,9 @@ def plot_monte_carlo_conv(S, K, T, r, sigma, n_simulations):
     fig = plt.figure(figsize=(7, 5))
     
     plt.plot(x, monte_carlo_prices, linewidth=0.9, color='steelblue', label='Monte Carlo call price')
-    plt.axhline(call_price(S, K, T, r, sigma), linestyle='--', linewidth=0.9, color='black', label=f'Black & Scholes call price {call_price(S, K, T, r, sigma):.4f}')
+    plt.axhline(call_price(S, K, T, r, sigma),
+                linestyle='--', linewidth=0.9, color='black',
+                label=f'Black & Scholes call price {call_price(S, K, T, r, sigma):.4f}')
     plt.xlabel('Number of simulation')
     plt.ylabel('Call price')
     plt.grid(True, alpha=0.4)
@@ -133,88 +135,53 @@ def load_vol_surface_data(ticker_symbol, r):
     call_strikes = []
     call_maturities = []
     call_type = []
-    #call_volumes = []
 
     put_prices = []
     put_strikes = []
     put_maturities = []
     put_type = []
-    #put_volumes = []
 
     for maturity in ticker.options:
         chain = ticker.option_chain(maturity)
+
         for _ in range(len(chain.calls)):
             call_maturities.append(maturity)
             call_prices.append((chain.calls['bid'][_] + chain.calls['ask'][_]) / 2)
             call_strikes.append(chain.calls['strike'][_])
             call_type.append('call')
-            #call_volumes.append(chain.calls['volume'][_])
+
         for _ in range(len(chain.puts)):
             put_maturities.append(maturity)
             put_prices.append((chain.puts['bid'][_] + chain.puts['ask'][_]) / 2)
             put_strikes.append(chain.puts['strike'][_])
             put_type.append('put')
-            #put_volumes.append(chain.puts['volume'][_])
 
-    #calls = pd.DataFrame({'price': call_prices, 'strike': call_strikes, 'maturityDate': call_maturities, 'volume': call_volumes})
-    #puts = pd.DataFrame({'price': put_prices, 'strike': put_strikes, 'maturityDate': put_maturities, 'volume': put_volumes})
-
-    calls = pd.DataFrame({'price': call_prices, 'strike': call_strikes, 'maturityDate': call_maturities, 'optionType': call_type})
-    puts = pd.DataFrame({'price': put_prices, 'strike': put_strikes, 'maturityDate': put_maturities, 'optionType': put_type})
+    calls = pd.DataFrame({'price': call_prices,
+                         'strike': call_strikes,
+                         'maturityDate': call_maturities,
+                         'optionType': call_type}
+                        )
+    puts = pd.DataFrame({'price': put_prices,
+                         'strike': put_strikes,
+                         'maturityDate': put_maturities,
+                         'optionType': put_type}
+                        )
 
     options = pd.concat([calls[calls['strike'] >= S], puts[puts['strike'] <= S]]).reset_index(drop=True)
 
     options['maturityDate'] = pd.to_datetime(options['maturityDate'])
-    #calls['maturityDate'] = pd.to_datetime(calls['maturityDate'])
-    #puts['maturityDate'] = pd.to_datetime(puts['maturityDate'])
 
     options_maturities = []
-    # call_maturities = []
-    # put_maturities = []
+
     for _ in range(len(options['maturityDate'])):
         diff = options['maturityDate'][_].to_pydatetime() - datetime.today()
         options_maturities.append(diff.days/252)
-    # for _ in range(len(puts['maturityDate'])):
-    #     diff = puts['maturityDate'][_].to_pydatetime() - datetime.today()
-    #     put_maturities.append(diff.days/252)
 
     options['maturity'] = options_maturities
-    #calls['maturity'] = call_maturities
-    #puts['maturity'] = put_maturities
 
     options = options[options['maturity'] >= 7/252].reset_index(drop=True)
-    # calls = calls[calls['maturity'] >= 7/252].reset_index(drop=True)
-    # puts = puts[puts['maturity'] >= 7/252].reset_index(drop=True)
-
     options = options[options['price'] > 0].reset_index(drop=True)
-    # calls = calls[calls['price'] > 0].reset_index(drop=True)
-    # puts = puts[puts['price'] > 0].reset_index(drop=True)
-
     options = options[(options['strike'] >= 0.2 * S) & (options['strike'] <= 1.8 * S)].reset_index(drop=True)
-    # calls = calls[(calls['strike'] >= 0.2 * S) & (calls['strike'] <= 1.8 * S)].reset_index(drop=True)
-    # puts = puts[(puts['strike'] >= 0.2 * S) & (puts['strike'] <= 1.2 * S)].reset_index(drop=True)
-
-    #calls = calls[calls['volume'] > 10].reset_index(drop=True)
-    #puts = puts[puts['volume'] > 10].reset_index(drop=True)
-
-    # calls_implied_vol = []
-    # for _, row in calls.iterrows():
-    #     try:
-    #         implied_vol = implied_volatility(
-    #             row['price'],
-    #             S, 
-    #             row['strike'], 
-    #             row['maturity'], 
-    #             r=0.05, 
-    #             method='bisection'     
-    #         )
-    #         calls_implied_vol.append(implied_vol)
-    #     except:
-    #         calls_implied_vol.append(None)
-
-    # calls['implied_vol'] = calls_implied_vol
-    # print(f'{calls['implied_vol'].isna().sum()} calls without implied volatility')
-    # print(calls.head())
 
     options_implied_vol = []
     for _, row in options.iterrows():
@@ -234,15 +201,8 @@ def load_vol_surface_data(ticker_symbol, r):
 
     options['implied_vol'] = options_implied_vol
 
-    # options = options[(options['implied_vol'] > 0.01) & (options['implied_vol'] < 1)].reset_index(drop=True)
-    # calls = calls[(calls['implied_vol'] > 0.01) & (calls['implied_vol'] < 1)].reset_index(drop=True)
-    # puts = puts[(puts['implied_vol'] > 0.01) & (puts['implied_vol'] < 1)].reset_index(drop=True)
-
-    options.dropna(inplace=True)
-    # calls.dropna(inplace=True)
-    # puts.dropna(inplace=True)
-
     options['ticker'] = [ticker_symbol for _ in range(options.shape[0])]
+    options.dropna(inplace=True)
 
     return options
 
@@ -277,30 +237,21 @@ def plot_vol_surf(options, method='linear'):
     
 st.set_page_config(layout="wide")
 
-# Title and text
 st.title("Options pricing engine")
-st.write("Visiualize Black Scholes, Monte Carlo, Binomial tree. Import real data and compute the implied volatility surface")
+st.write("Visualize Black Scholes, Monte Carlo, Binomial tree. Import real data and compute the implied volatility surface")
 
 col1, col2 = st.columns(2)
 
-# Sliders et inputs
 S = col1.number_input("Spot price", value=100.0, min_value=0.0)
 K = col1.slider("Strike", min_value=1, max_value=int(S * 2), value=int(S))
 T = col1.slider("Maturity (in years)", min_value=7/252, max_value=5.0, value=1.0)
 r = col1.slider("Interest rate", min_value=0.0, max_value=1.0, value=0.05)
 sigma = col1.slider("Volatility", min_value=0.01, max_value=2.0, value=0.2)
 
-# Afficher des valeurs
-#st.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
-#st.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
 col1_1, col1_2 = col1.columns(2)
 col1_1.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
 col1_2.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
 
-# Afficher un graphe matplotlib
-#st.pyplot(fig)
-
-# Onglets
 tab1, tab2, tab3 = col2.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface"])
 with tab1:
     start_range = st.slider("Lower bound", min_value=0, max_value=int(S), value=0)
@@ -330,6 +281,7 @@ with tab3:
     tab3_col1, tab3_col2 = st.columns(2)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
+    
     if tab3_col1.button("Load data"):
         with st.spinner("Loading data..."):
             options = load_vol_surface_data(ticker_input, r)

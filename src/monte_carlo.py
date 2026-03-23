@@ -60,19 +60,3 @@ def mc_barrier_call(S, K, T, r, sigma, barrier, n_simulations=10000, n_steps=252
     payoffs = np.where(barrier_crossed, 0, final_payoffs)
 
     return np.mean(payoffs) * np.exp(-r * T)
-    '''
-    barrier_crossed = False
-    for row_index in range(n_simulations):
-        barrier_crossed = False
-        for col_index in range(n_steps - 1):
-            if paths[row_index, col_index] >= barrier:
-                barrier_crossed = True
-        if barrier_crossed:
-            payoffs[row_index] = 0
-        else:
-            if paths[row_index, -1] - K > 0:
-                payoffs[row_index] = paths[row_index, -1] - K
-            else:
-                payoffs[row_index] = 0
-    '''
-  
