@@ -46,9 +46,9 @@ def rho_put(S, K, T, r, sigma):
     _, d2 = _d1_d2(S, K, T, r, sigma)
     return -K * T * np.exp(-r * T) * norm.cdf(-d2)
 
-def _bisection_method(price, S, K, T, r, option_type, epsilon):
+def _bisection_method(price, S, K, T, r, option_type, epsilon, max_iter):
     volLower = 0.001
-    volUpper = 1
+    volUpper = 10
     volMid = (volLower + volUpper) / 2
 
     if option_type=='call':
@@ -56,14 +56,17 @@ def _bisection_method(price, S, K, T, r, option_type, epsilon):
     else:
         pricer = put_price
 
-    while abs(pricer(S, K, T, r, volMid) - price) > epsilon:
-        if (pricer(S, K, T, r, volMid) - price) * (pricer(S, K, T, r, volLower) - price) < 0:
-            volUpper = volMid
+    for _ in range(max_iter):
+        if abs(pricer(S, K, T, r, volMid) - price) > epsilon:
+            if (pricer(S, K, T, r, volMid) - price) * (pricer(S, K, T, r, volLower) - price) < 0:
+                volUpper = volMid
+            else:
+                volLower = volMid
+            volMid = (volLower + volUpper) / 2
         else:
-            volLower = volMid
-        volMid = (volLower + volUpper) / 2
+            return volMid
     
-    return volMid
+    raise ValueError("Bisection did not converge")
 
 def _newton_raphson(price, S, K, T, r, option_type, epsilon, guess, max_iter):
     sigma = guess
@@ -79,10 +82,10 @@ def _newton_raphson(price, S, K, T, r, option_type, epsilon, guess, max_iter):
         else:
             return sigma
     
-    raise ValueError("Newton-Raphson does not converge")
+    raise ValueError("Newton-Raphson did not converge")
 
-def implied_volatility(price, S, K, T, r, option_type='call', method='bisection', epsilon=10**(-5), guess=0.2, max_iter=100):
+def implied_volatility(price, S, K, T, r, option_type='call', method='bisection', epsilon=10**(-5), guess=0.2, max_iter=1000):
     if method == 'bisection':
-        return _bisection_method(price, S, K, T, r, option_type, epsilon)
+        return _bisection_method(price, S, K, T, r, option_type, epsilon, max_iter)
     else:
         return _newton_raphson(price, S, K, T, r, option_type, epsilon, guess, max_iter)
