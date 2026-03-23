@@ -120,6 +120,7 @@ def plot_monte_carlo_conv(S, K, T, r, sigma, n_simulations):
     
     return fig
 
+@st.cache_data
 def load_spot_price(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
     S = ticker.history()['Close'].iloc[-1]
@@ -281,7 +282,7 @@ with tab3:
     tab3_col1, tab3_col2 = st.columns(2)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
-    
+
     if tab3_col1.button("Load data"):
         with st.spinner("Loading data..."):
             options = load_vol_surface_data(ticker_input, r)
@@ -290,7 +291,7 @@ with tab3:
 
     if tab3_col2.button("Plot volatility surface"):
         if 'options' in st.session_state:
-            vol_surf_fig = plot_vol_surf(st.session_state['options'])
-            st.plotly_chart(vol_surf_fig, use_container_width=True)
-        else:
-            st.error("Please load data first!")
+            st.session_state['vol_fig'] = plot_vol_surf(st.session_state['options'])
+
+    if 'vol_fig' in st.session_state:
+        st.plotly_chart(st.session_state['vol_fig'], use_container_width=True)
