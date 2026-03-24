@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.interpolate import griddata
 from datetime import date, datetime
 import plotly.graph_objects as go
+import time
 
 from src.black_scholes import *
 from src.monte_carlo import *
@@ -157,6 +158,8 @@ def load_vol_surface_data(ticker_symbol, r):
                 put_prices.append((chain.puts['bid'][_] + chain.puts['ask'][_]) / 2)
                 put_strikes.append(chain.puts['strike'][_])
                 put_type.append('put')
+            
+            time.sleep(0.5)
 
         calls = pd.DataFrame({'price': call_prices,
                             'strike': call_strikes,
