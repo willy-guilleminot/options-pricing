@@ -129,7 +129,7 @@ def load_spot_price(ticker_symbol):
     return S
 
 @st.cache_data
-def load_vol_surface_data(ticker_symbol, r):
+def load_vol_surface_data(ticker_symbol, r, sleep):
     try:
         ticker = yf.Ticker(ticker_symbol)
         S = load_spot_price(ticker_symbol)
@@ -159,7 +159,7 @@ def load_vol_surface_data(ticker_symbol, r):
                 put_strikes.append(chain.puts['strike'][_])
                 put_type.append('put')
             
-            time.sleep(0.5)
+            time.sleep(sleep)
 
         calls = pd.DataFrame({'price': call_prices,
                             'strike': call_strikes,
@@ -235,6 +235,8 @@ def plot_vol_surf(options, method='linear'):
 
     fig.update_layout(
         title=f"{options['ticker'].iloc[0]} Implied Volatility Surface",
+        width=1000,
+        margin=dict(l=0, r=0, b=0, t=40),
         scene=dict(
             xaxis_title='Strike',
             yaxis_title='Maturity',
@@ -246,22 +248,21 @@ def plot_vol_surf(options, method='linear'):
     
 st.set_page_config(layout="wide")
 
-st.title("Options pricing engine")
+st.title("Options pricing engine v2")
 st.write("Visualize Black Scholes, Monte Carlo, and binomial tree. Import real data and compute the implied volatility surface.")
+
+S = st.number_input("Spot price", value=100.0, min_value=0.0)
+K = st.slider("Strike", min_value=1, max_value=int(S * 2), value=int(S))
+T = st.slider("Maturity (in years)", min_value=7/252, max_value=5.0, value=1.0)
+r = st.slider("Interest rate", min_value=0.0, max_value=1.0, value=0.05)
+sigma = st.slider("Volatility", min_value=0.01, max_value=2.0, value=0.2)
 
 col1, col2 = st.columns(2)
 
-S = col1.number_input("Spot price", value=100.0, min_value=0.0)
-K = col1.slider("Strike", min_value=1, max_value=int(S * 2), value=int(S))
-T = col1.slider("Maturity (in years)", min_value=7/252, max_value=5.0, value=1.0)
-r = col1.slider("Interest rate", min_value=0.0, max_value=1.0, value=0.05)
-sigma = col1.slider("Volatility", min_value=0.01, max_value=2.0, value=0.2)
+col1.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
+col2.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
 
-col1_1, col1_2 = col1.columns(2)
-col1_1.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
-col1_2.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
-
-tab1, tab2, tab3 = col2.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface"])
+tab1, tab2, tab3 = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface"])
 with tab1:
     start_range = st.slider("Lower bound", min_value=0, max_value=int(S), value=0)
     end_range = st.slider("Upper bound", min_value=int(S), max_value=int(S*4), value=int(S*2))
@@ -287,20 +288,22 @@ with tab2:
     st.pyplot(monte_carlo_conv_fig)
 
 with tab3:
-    tab3_col1, tab3_col2 = st.columns(2)
+    tab3_col1, tab3_col2, tab3_col3 = st.columns(3)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
+    sleep = tab3_col3.slider("Sleep time for loading data", min_value=0.0, max_value=10.0, value=0.0)
 
-    if tab3_col1.button("Load data"):
+    tab3_col1_col1, tab3_col1_col2 = tab3_col1.columns(2)
+    if tab3_col1_col1.button("Load data", use_container_width=True):
         with st.spinner("Loading data..."):
-            options = load_vol_surface_data(ticker_input, r)
+            options = load_vol_surface_data(ticker_input, r, sleep)
             if options is not None:
                 st.session_state['options'] = options
                 st.toast("Data loaded successfully!")
             else:
                 st.error("Failed to load data. Please try again.")
 
-    if tab3_col2.button("Plot volatility surface"):
+    if tab3_col1_col2.button("Plot volatility surface", use_container_width=True):
         if 'options' in st.session_state:
             st.session_state['vol_fig'] = plot_vol_surf(st.session_state['options'])
 
