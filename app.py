@@ -133,6 +133,10 @@ def load_vol_surface_data(ticker_symbol, max_maturities, r=0.05):
     try:
         ticker = yf.Ticker(ticker_symbol)
         S = load_spot_price(ticker_symbol)
+        n_maturities = len(yf.Ticker(ticker_symbol).options)
+
+        if max_maturities > n_maturities:
+            max_maturities = n_maturities
 
         maturities = ticker.options[:max_maturities]
 
