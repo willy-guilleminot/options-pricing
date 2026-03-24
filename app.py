@@ -266,7 +266,7 @@ col1, col2 = st.columns(2)
 col1.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
 col2.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
 
-BS_tab, Monte_Carlo_tab, Vol_surfa_tab = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface (works only with a local connection)"])
+BS_tab, Monte_Carlo_tab, Vol_surf_tab = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface (works only with a local connection)"])
 with BS_tab:
     start_range = st.slider("Lower bound", min_value=0, max_value=int(S), value=0)
     end_range = st.slider("Upper bound", min_value=int(S), max_value=int(S*4), value=int(S*2))
@@ -291,7 +291,7 @@ with Monte_Carlo_tab:
     st.pyplot(simulation_paths_fig)
     st.pyplot(monte_carlo_conv_fig)
 
-with Vol_surfa_tab:
+with Vol_surf_tab:
     tab3_col1, tab3_col2, tab3_col3 = st.columns(3)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
@@ -310,6 +310,5 @@ with Vol_surfa_tab:
     if tab3_col1_col2.button("Plot volatility surface", use_container_width=True):
         if 'options' in st.session_state:
             st.session_state['vol_fig'] = plot_vol_surf(st.session_state['options'])
-
-    if 'vol_fig' in st.session_state:
-        st.plotly_chart(st.session_state['vol_fig'], use_container_width=True)
+        else:
+            st.error("No data. Please load data first.")
