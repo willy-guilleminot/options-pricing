@@ -295,7 +295,7 @@ with Vol_surfa_tab:
     tab3_col1, tab3_col2, tab3_col3 = st.columns(3)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
-    max_maturities = tab3_col3.slider("Number of maturities", min_value=1, max_value=len(yf.Ticker(ticker_input).options), value=5)
+    max_maturities = tab3_col3.slider("Number of maturities", min_value=1, max_value=100, value=5)
 
     tab3_col1_col1, tab3_col1_col2 = tab3_col1.columns(2)
     if tab3_col1_col1.button("Load data", use_container_width=True):
