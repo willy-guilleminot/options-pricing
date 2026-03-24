@@ -128,8 +128,8 @@ def load_spot_price(ticker_symbol):
 
     return S
 
-@st.cache_data
-def load_vol_surface_data(ticker_symbol, r, sleep):
+@st.cache_data(ttl=600)
+def load_vol_surface_data(ticker_symbol, r):
     try:
         ticker = yf.Ticker(ticker_symbol)
         S = load_spot_price(ticker_symbol)
@@ -158,8 +158,6 @@ def load_vol_surface_data(ticker_symbol, r, sleep):
                 put_prices.append((chain.puts['bid'][_] + chain.puts['ask'][_]) / 2)
                 put_strikes.append(chain.puts['strike'][_])
                 put_type.append('put')
-            
-            time.sleep(sleep)
 
         calls = pd.DataFrame({'price': call_prices,
                             'strike': call_strikes,
@@ -262,7 +260,7 @@ col1, col2 = st.columns(2)
 col1.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
 col2.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
 
-tab1, tab2, tab3 = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface"])
+tab1, tab2, tab3 = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface (works only with a local connection)"])
 with tab1:
     start_range = st.slider("Lower bound", min_value=0, max_value=int(S), value=0)
     end_range = st.slider("Upper bound", min_value=int(S), max_value=int(S*4), value=int(S*2))
@@ -291,12 +289,11 @@ with tab3:
     tab3_col1, tab3_col2, tab3_col3 = st.columns(3)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
-    sleep = tab3_col3.slider("Sleep time for loading data", min_value=0.0, max_value=10.0, value=0.0)
 
     tab3_col1_col1, tab3_col1_col2 = tab3_col1.columns(2)
     if tab3_col1_col1.button("Load data", use_container_width=True):
         with st.spinner("Loading data..."):
-            options = load_vol_surface_data(ticker_input, r, sleep)
+            options = load_vol_surface_data(ticker_input, r)
             if options is not None:
                 st.session_state['options'] = options
                 st.toast("Data loaded successfully!")
