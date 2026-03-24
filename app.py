@@ -129,83 +129,88 @@ def load_spot_price(ticker_symbol):
 
 @st.cache_data
 def load_vol_surface_data(ticker_symbol, r):
-    ticker = yf.Ticker(ticker_symbol)
-    S = load_spot_price(ticker_symbol)
+    try:
+        ticker = yf.Ticker(ticker_symbol)
+        S = load_spot_price(ticker_symbol)
 
-    call_prices = []
-    call_strikes = []
-    call_maturities = []
-    call_type = []
+        call_prices = []
+        call_strikes = []
+        call_maturities = []
+        call_type = []
 
-    put_prices = []
-    put_strikes = []
-    put_maturities = []
-    put_type = []
+        put_prices = []
+        put_strikes = []
+        put_maturities = []
+        put_type = []
 
-    for maturity in ticker.options:
-        chain = ticker.option_chain(maturity)
+        for maturity in ticker.options:
+            chain = ticker.option_chain(maturity)
 
-        for _ in range(len(chain.calls)):
-            call_maturities.append(maturity)
-            call_prices.append((chain.calls['bid'][_] + chain.calls['ask'][_]) / 2)
-            call_strikes.append(chain.calls['strike'][_])
-            call_type.append('call')
+            for _ in range(len(chain.calls)):
+                call_maturities.append(maturity)
+                call_prices.append((chain.calls['bid'][_] + chain.calls['ask'][_]) / 2)
+                call_strikes.append(chain.calls['strike'][_])
+                call_type.append('call')
 
-        for _ in range(len(chain.puts)):
-            put_maturities.append(maturity)
-            put_prices.append((chain.puts['bid'][_] + chain.puts['ask'][_]) / 2)
-            put_strikes.append(chain.puts['strike'][_])
-            put_type.append('put')
+            for _ in range(len(chain.puts)):
+                put_maturities.append(maturity)
+                put_prices.append((chain.puts['bid'][_] + chain.puts['ask'][_]) / 2)
+                put_strikes.append(chain.puts['strike'][_])
+                put_type.append('put')
 
-    calls = pd.DataFrame({'price': call_prices,
-                         'strike': call_strikes,
-                         'maturityDate': call_maturities,
-                         'optionType': call_type}
-                        )
-    puts = pd.DataFrame({'price': put_prices,
-                         'strike': put_strikes,
-                         'maturityDate': put_maturities,
-                         'optionType': put_type}
-                        )
+        calls = pd.DataFrame({'price': call_prices,
+                            'strike': call_strikes,
+                            'maturityDate': call_maturities,
+                            'optionType': call_type}
+                            )
+        puts = pd.DataFrame({'price': put_prices,
+                            'strike': put_strikes,
+                            'maturityDate': put_maturities,
+                            'optionType': put_type}
+                            )
 
-    options = pd.concat([calls[calls['strike'] >= S], puts[puts['strike'] <= S]]).reset_index(drop=True)
+        options = pd.concat([calls[calls['strike'] >= S], puts[puts['strike'] <= S]]).reset_index(drop=True)
 
-    options['maturityDate'] = pd.to_datetime(options['maturityDate'])
+        options['maturityDate'] = pd.to_datetime(options['maturityDate'])
 
-    options_maturities = []
+        options_maturities = []
 
-    for _ in range(len(options['maturityDate'])):
-        diff = options['maturityDate'][_].to_pydatetime() - datetime.today()
-        options_maturities.append(diff.days/252)
+        for _ in range(len(options['maturityDate'])):
+            diff = options['maturityDate'][_].to_pydatetime() - datetime.today()
+            options_maturities.append(diff.days/252)
 
-    options['maturity'] = options_maturities
+        options['maturity'] = options_maturities
 
-    options = options[options['maturity'] >= 7/252].reset_index(drop=True)
-    options = options[options['price'] > 0].reset_index(drop=True)
-    options = options[(options['strike'] >= 0.2 * S) & (options['strike'] <= 1.8 * S)].reset_index(drop=True)
+        options = options[options['maturity'] >= 7/252].reset_index(drop=True)
+        options = options[options['price'] > 0].reset_index(drop=True)
+        options = options[(options['strike'] >= 0.2 * S) & (options['strike'] <= 1.8 * S)].reset_index(drop=True)
 
-    options_implied_vol = []
-    for _, row in options.iterrows():
-        try:
-            implied_vol = implied_volatility(
-                row['price'],
-                S,
-                row['strike'],
-                row['maturity'],
-                r,
-                option_type=row['optionType'],
-                method='bisection'
-            )
-            options_implied_vol.append(implied_vol)
-        except:
-            options_implied_vol.append(None)
+        options_implied_vol = []
+        for _, row in options.iterrows():
+            try:
+                implied_vol = implied_volatility(
+                    row['price'],
+                    S,
+                    row['strike'],
+                    row['maturity'],
+                    r,
+                    option_type=row['optionType'],
+                    method='bisection'
+                )
+                options_implied_vol.append(implied_vol)
+            except:
+                options_implied_vol.append(None)
 
-    options['implied_vol'] = options_implied_vol
+        options['implied_vol'] = options_implied_vol
 
-    options['ticker'] = [ticker_symbol for _ in range(options.shape[0])]
-    options.dropna(inplace=True)
+        options['ticker'] = [ticker_symbol for _ in range(options.shape[0])]
+        options.dropna(inplace=True)
 
-    return options
+        return options
+    
+    except Exception as e:
+        st.error(f"Error loading options data: {str(e)}. Try again in a few seconds.")
+        return None
 
 def plot_vol_surf(options, method='linear'):
     strikes_grid = np.linspace(options['strike'].min(), options['strike'].max(), 100)
@@ -239,7 +244,7 @@ def plot_vol_surf(options, method='linear'):
 st.set_page_config(layout="wide")
 
 st.title("Options pricing engine")
-st.write("Visualize Black Scholes, Monte Carlo, Binomial tree. Import real data and compute the implied volatility surface")
+st.write("Visualize Black Scholes, Monte Carlo, and binomial tree. Import real data and compute the implied volatility surface.")
 
 col1, col2 = st.columns(2)
 
@@ -286,8 +291,11 @@ with tab3:
     if tab3_col1.button("Load data"):
         with st.spinner("Loading data..."):
             options = load_vol_surface_data(ticker_input, r)
-            st.session_state['options'] = options
-        st.toast("Data loaded successfully!")
+            if options is not None:
+                st.session_state['options'] = options
+                st.toast("Data loaded successfully!")
+            else:
+                st.error("Failed to load data. Please try again.")
 
     if tab3_col2.button("Plot volatility surface"):
         if 'options' in st.session_state:
