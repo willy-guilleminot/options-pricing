@@ -128,11 +128,13 @@ def load_spot_price(ticker_symbol):
 
     return S
 
-@st.cache_data(ttl=600)
-def load_vol_surface_data(ticker_symbol, r):
+@st.cache_data(ttl=600, show_spinner=False)
+def load_vol_surface_data(ticker_symbol, max_maturities, r=0.05):
     try:
         ticker = yf.Ticker(ticker_symbol)
         S = load_spot_price(ticker_symbol)
+
+        maturities = ticker.options[:max_maturities]
 
         call_prices = []
         call_strikes = []
@@ -144,7 +146,7 @@ def load_vol_surface_data(ticker_symbol, r):
         put_maturities = []
         put_type = []
 
-        for maturity in ticker.options:
+        for maturity in maturities:
             chain = ticker.option_chain(maturity)
 
             for _ in range(len(chain.calls)):
@@ -260,8 +262,8 @@ col1, col2 = st.columns(2)
 col1.metric("Black & Scholes call price", f"{call_price(S, K, T, r, sigma):.2f}")
 col2.metric("Black & Scholes put price", f"{put_price(S, K, T, r, sigma):.2f}")
 
-tab1, tab2, tab3 = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface (works only with a local connection)"])
-with tab1:
+BS_tab, Monte_Carlo_tab, Vol_surfa_tab = st.tabs(["Black-Scholes", "Monte Carlo", "Volatility Surface (works only with a local connection)"])
+with BS_tab:
     start_range = st.slider("Lower bound", min_value=0, max_value=int(S), value=0)
     end_range = st.slider("Upper bound", min_value=int(S), max_value=int(S*4), value=int(S*2))
 
@@ -274,7 +276,7 @@ with tab1:
     with tab1_2:
         st.pyplot(greeks_fig)
 
-with tab2:
+with Monte_Carlo_tab:
     n_simulations_1 = st.number_input("Number of simulations for paths simulation chart", value=30, min_value=1)
     n_simulations_2 = st.number_input("Number of simulations for Monte Carlo convergence", value=5000, min_value=1)
     n_steps = st.number_input("Number of steps", value=252, min_value=1)
@@ -285,15 +287,16 @@ with tab2:
     st.pyplot(simulation_paths_fig)
     st.pyplot(monte_carlo_conv_fig)
 
-with tab3:
+with Vol_surfa_tab:
     tab3_col1, tab3_col2, tab3_col3 = st.columns(3)
     ticker_input = tab3_col1.text_input("Ticker", value="SPY")
     tab3_col2.metric(f"{ticker_input} spot price", f"{load_spot_price(ticker_input):.2f}")
+    max_maturities = tab3_col3.slider("Number of maturities", min_value=1, max_value=len(yf.Ticker(ticker_input).options), value=5)
 
     tab3_col1_col1, tab3_col1_col2 = tab3_col1.columns(2)
     if tab3_col1_col1.button("Load data", use_container_width=True):
         with st.spinner("Loading data..."):
-            options = load_vol_surface_data(ticker_input, r)
+            options = load_vol_surface_data(ticker_input, max_maturities)
             if options is not None:
                 st.session_state['options'] = options
                 st.toast("Data loaded successfully!")
