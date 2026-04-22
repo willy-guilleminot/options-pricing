@@ -1,5 +1,6 @@
 import numpy as np
 
+# Compute risk-neutral probability
 def _u_d_p(r, sigma, dt):
     u = np.exp(sigma * np.sqrt(dt))
     d = 1 / u
@@ -7,6 +8,7 @@ def _u_d_p(r, sigma, dt):
 
     return u, d, p
 
+# Compute call price using the binomial model
 def crr_call(S, K, T, r, sigma, n_steps=100):
     dt = T /n_steps
     u, d, p = _u_d_p(r, sigma, dt)
@@ -21,6 +23,7 @@ def crr_call(S, K, T, r, sigma, n_steps=100):
     
     return payoffs[0]
 
+# Compute put price using the binomial model
 def crr_put(S, K, T, r, sigma, n_steps=100):
     dt = T /n_steps
     u, d, p = _u_d_p(r, sigma, dt)
@@ -35,6 +38,7 @@ def crr_put(S, K, T, r, sigma, n_steps=100):
     
     return payoffs[0]
 
+# Compute american call price using the binomial model
 def crr_american_call(S, K, T, r, sigma, n_steps=100):
     dt = T /n_steps
     u, d, p = _u_d_p(r, sigma, dt)
@@ -51,6 +55,7 @@ def crr_american_call(S, K, T, r, sigma, n_steps=100):
 
     return payoffs[0]
 
+# Compute american pur price using the binomial model
 def crr_american_put(S, K, T, r, sigma, n_steps=100):
     dt = T /n_steps
     u, d, p = _u_d_p(r, sigma, dt)
